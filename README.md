@@ -54,7 +54,7 @@ wscript.exe "完整路径\Launch-AntigravityWithProxy.vbs"
 
 ## 注意事项
 
-- 此项目不包含 Antigravity 本体、汉化补丁、账号信息或代理订阅。
+- 此项目不包含 Antigravity 本体、账号信息或代理订阅。
 - 本工具不保证特定 Antigravity 版本兼容。升级后请先运行 `-Check`。
 - `ProxyUrl` 必须是本机可用的 HTTP 代理地址；端口取决于你自己的代理软件。
 
