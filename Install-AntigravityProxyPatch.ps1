@@ -34,17 +34,52 @@ function Write-Utf8NoBom([string]$Path, [string]$Content) {
     [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
 }
 
+function Expand-AntigravityAsar([string]$AsarPath, [string]$UnpackedAppPath, [string]$ExpectedLanguageServerPath, [string]$ProxyUrl) {
+    $disabledAsarPath = "$AsarPath.disabled"
+    if (Test-Path -LiteralPath $UnpackedAppPath) {
+        throw "发现不完整的解包目录：$UnpackedAppPath。请先人工检查或还原后再执行。"
+    }
+    if (Test-Path -LiteralPath $disabledAsarPath) {
+        throw "已存在禁用的 ASAR 备份：$disabledAsarPath。请先人工检查或还原后再执行。"
+    }
+
+    $npm = Get-Command npm -ErrorAction Stop
+    $previousHttpProxy = $env:HTTP_PROXY
+    $previousHttpsProxy = $env:HTTPS_PROXY
+    try {
+        # These values exist only while npm fetches/runs the official ASAR tool.
+        $env:HTTP_PROXY = $ProxyUrl
+        $env:HTTPS_PROXY = $ProxyUrl
+        Write-Status '正在使用官方 @electron/asar 完整解包新版应用包...'
+        & $npm.Source exec --yes --package '@electron/asar@4.3.0' -- asar extract $AsarPath $UnpackedAppPath
+        if ($LASTEXITCODE -ne 0) {
+            throw "官方 ASAR 工具退出失败，代码：$LASTEXITCODE"
+        }
+    } finally {
+        $env:HTTP_PROXY = $previousHttpProxy
+        $env:HTTPS_PROXY = $previousHttpsProxy
+    }
+
+    $constantsPath = Join-Path $UnpackedAppPath 'dist\ideInstall\constants.js'
+    if (-not (Test-Path -LiteralPath $ExpectedLanguageServerPath) -or -not (Test-Path -LiteralPath $constantsPath)) {
+        throw '官方解包结果缺少关键模块；未切换 Antigravity 读取解包目录。'
+    }
+
+    Backup-File $AsarPath
+    Move-Item -LiteralPath $AsarPath -Destination $disabledAsarPath -ErrorAction Stop
+    Write-Status "已切换到经验证的完整解包目录：$UnpackedAppPath"
+}
+
 $appExe = Join-Path $InstallDirectory 'Antigravity.exe'
-$languageServerPath = Join-Path $InstallDirectory 'resources\app\dist\languageServer.js'
+$resourcesDirectory = Join-Path $InstallDirectory 'resources'
+$unpackedAppPath = Join-Path $resourcesDirectory 'app'
+$asarPath = Join-Path $resourcesDirectory 'app.asar'
+$languageServerPath = Join-Path $unpackedAppPath 'dist\languageServer.js'
 $configPath = Join-Path $env:APPDATA 'Antigravity\gui_config.json'
 
 if (-not (Test-Path -LiteralPath $appExe)) {
     throw "未找到 Antigravity.exe：$appExe"
 }
-if (-not (Test-Path -LiteralPath $languageServerPath)) {
-    throw "未找到语言服务启动文件：$languageServerPath"
-}
-
 $running = Get-Process -Name 'Antigravity', 'language_server' -ErrorAction SilentlyContinue
 if ($running) {
     $names = ($running | Select-Object -ExpandProperty ProcessName -Unique) -join '、'
@@ -53,6 +88,17 @@ if ($running) {
     } else {
         throw "请先完全退出 Antigravity 后再执行。正在运行：$names"
     }
+}
+
+if (-not (Test-Path -LiteralPath $languageServerPath)) {
+    if ($Check -and (Test-Path -LiteralPath $asarPath)) {
+        Write-Status '检测到新版 app.asar；实际安装时将使用官方 ASAR 工具完整解包后再修补。'
+        exit 0
+    }
+    if (-not (Test-Path -LiteralPath $asarPath)) {
+        throw "未找到语言服务启动文件或 app.asar：$languageServerPath"
+    }
+    Expand-AntigravityAsar $asarPath $unpackedAppPath $languageServerPath $ProxyUrl
 }
 
 $js = [System.IO.File]::ReadAllText($languageServerPath)
