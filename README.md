@@ -49,18 +49,18 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 .\Install-AgyProxyPatch.ps1 -ProxyUrl 'http://127.0.0.1:33210'
 ```
 
-### (3) 原生命令直接调用与代理接管机制
-脚本提供两种无感接管模式，使用户无需输入额外前缀，可直接使用原生 `agy` 命令：
+### (3) 直接运行 agy 命令
+脚本提供两种方式，让你不需要输入额外前缀，直接输入 `agy` 就能使用代理：
 * **PowerShell Profile 钩子（默认自动配置）**：
-  在用户的 PowerShell Profile 中注入优先级更高的 `agy` 函数。终端中执行 `agy` 命令将直接调用代理包装器，无需修改或重命名本体二进制文件。
+  在 PowerShell 配置文件中加入 `agy` 函数。在终端中输入 `agy` 会直接调用代理包装脚本，不需要修改或重命名原文件。
 * **全终端接管模式（`-TakeoverAgy`）**：
   ```powershell
   .\Install-AgyProxyPatch.ps1 -ProxyUrl 'http://127.0.0.1:33210' -TakeoverAgy
   ```
-  借鉴桌面端将 `app.asar` 重命名为 `app.asar.disabled` 的无感降级思想，该模式会将 `agy.exe` 安全备份为 `agy-real.exe` 并部署 `agy.cmd` 命令垫片，实现在 **CMD、PowerShell、Git Bash 等所有终端环境**中直接执行 `agy` 均自动启用代理加速。
+  该模式会将 `agy.exe` 备份为 `agy-real.exe`，并部署同名的 `agy.cmd` 脚本，实现在 **CMD、PowerShell、Git Bash 等所有终端**中直接输入 `agy` 都能自动走代理。
 
-### (4) Google 账号身份验证与配置说明
-如果 `settings.json` 中配置了 `"modelProvider": "gemini"`，CLI 会强制要求提供独立的开发者 API Key；若需使用个人的 Google 账号授权登录，需移除 `modelProvider`。`Install-AgyProxyPatch.ps1` 在检测到未配置 `GEMINI_API_KEY` 时会**自动完成该项优化**，启动时即可拉起浏览器完成 Google 账号 OAuth 授权流程。
+### (4) 使用个人 Google 账号登录
+如果 `settings.json` 中配置了 `"modelProvider": "gemini"`，CLI 会强制要求输入 API Key；如果想使用个人 Google 账号登录，需要移除 `modelProvider`。`Install-AgyProxyPatch.ps1` 在检测到未配置 `GEMINI_API_KEY` 时会**自动完成该项优化**，启动时直接打开浏览器完成 Google 账号授权即可。
 
 ### (5) CLI 卸载与回滚
 ```powershell
