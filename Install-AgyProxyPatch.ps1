@@ -6,8 +6,8 @@
     实现：
     1. settings.json (proxyServerURL) 的安全注入与时间戳备份。
     2. 生成进程级隔离启动器 (agy-proxy.cmd / agy-proxy.ps1)，注入大/小写全覆盖代理环境变量。
-    3. 支持 PowerShell Profile 钩子注入，直接键入 agy 即可无感走代理。
-    4. 支持 -TakeoverAgy 二进制接管模式（将 agy.exe 备份更名为 agy-real.exe，部署 agy.cmd），在所有终端（CMD/Git Bash等）中敲 agy 均生效。
+    3. 支持 PowerShell Profile 钩子注入，直接执行 agy 命令即可自动启用代理。
+    4. 支持 -TakeoverAgy 二进制接管模式（将 agy.exe 备份更名为 agy-real.exe，部署 agy.cmd），实现在所有终端（CMD/PowerShell/Git Bash 等）中直接调用 agy 均自动生效。
     5. 自动优化认证模式：若未指定独立 API Key，自动移除 modelProvider 以支持使用个人 Google 账号登录。
     6. 零系统污染：不修改 Windows 全局注册表或用户环境变量。
     7. 支持 -Check 探针模式、-Uninstall 卸载模式及代理端口连通性检查。
@@ -203,7 +203,7 @@ if ($Check) {
 
     $shimCmdStatus = if (Test-Path -LiteralPath $shimCmd) { '已就绪' } else { '未安装' }
     $shimPs1Status = if (Test-Path -LiteralPath $shimPs1) { '已就绪' } else { '未安装' }
-    $takeoverStatus = if ($isTakeoverActive) { '已激活 (直接输入 agy 走代理)' } else { '未激活' }
+    $takeoverStatus = if ($isTakeoverActive) { '已激活 (直接执行 agy 自动启用代理)' } else { '未激活' }
 
     Write-Status "专用垫片 (agy-proxy.cmd)：$shimCmdStatus"
     Write-Status "PowerShell 垫片 (agy-proxy.ps1)：$shimPs1Status"
@@ -499,6 +499,6 @@ function agy {
 }
 
 Write-Status "=== 补丁配置完成 ==="
-Write-Status "直接生效验证："
-Write-Status "1. 在终端直接输入 agy 即可启动带代理的会话！"
-Write-Status "2. 所有派生命令（Git, Curl, Python, MCP）均自动走局部代理，退出即还原。"
+Write-Status "验证指引："
+Write-Status "1. 在终端中直接执行 agy 即可启动已启用局部代理的 CLI 会话。"
+Write-Status "2. 所有派生命令（Git, Curl, Python, MCP 等）均自动继承局部代理，会话结束自动销毁。"
