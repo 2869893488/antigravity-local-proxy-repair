@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Antigravity CLI (agy) 本地代理修复与局部注入维护脚本
 .DESCRIPTION
@@ -338,7 +338,7 @@ set "http_proxy=$ProxyUrl"
 set "https_proxy=$ProxyUrl"
 set "ALL_PROXY=$ProxyUrl"
 set "all_proxy=$ProxyUrl"
-set "NO_PROXY=localhost,127.0.0.1,::1"
+set "NO_PROXY=localhost,127.0.0.1,::1,*.local"
 
 if exist "%~dp0agy-real.exe" (
     "%~dp0agy-real.exe" %*
@@ -378,7 +378,7 @@ try {
     `$env:https_proxy = '$ProxyUrl'
     `$env:ALL_PROXY   = '$ProxyUrl'
     `$env:all_proxy   = '$ProxyUrl'
-    `$env:NO_PROXY    = 'localhost,127.0.0.1,::1'
+    `$env:NO_PROXY    = 'localhost,127.0.0.1,::1,*.local'
 
     `$targetRealExe = Join-Path `$PSScriptRoot 'agy-real.exe'
     `$targetExe     = Join-Path `$PSScriptRoot 'agy.exe'
@@ -436,7 +436,7 @@ set "http_proxy=$ProxyUrl"
 set "https_proxy=$ProxyUrl"
 set "ALL_PROXY=$ProxyUrl"
 set "all_proxy=$ProxyUrl"
-set "NO_PROXY=localhost,127.0.0.1,::1"
+set "NO_PROXY=localhost,127.0.0.1,::1,*.local"
 
 if exist "%~dp0agy-real.exe" (
     "%~dp0agy-real.exe" %*
@@ -460,7 +460,7 @@ if (-not $NoProfileHook) {
 # ANTIGRAVITY_PROXY_PATCH_BEGIN
 # Scoped process-isolated proxy wrapper for Antigravity CLI
 function agy {
-    & "$shimCmd" @args
+    & "$shimPs1" @args
 }
 # ANTIGRAVITY_PROXY_PATCH_END
 "@

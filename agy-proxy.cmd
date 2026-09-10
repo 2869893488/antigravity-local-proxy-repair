@@ -22,7 +22,7 @@ set "http_proxy=%TARGET_PROXY%"
 set "https_proxy=%TARGET_PROXY%"
 set "ALL_PROXY=%TARGET_PROXY%"
 set "all_proxy=%TARGET_PROXY%"
-set "NO_PROXY=localhost,127.0.0.1,::1"
+set "NO_PROXY=localhost,127.0.0.1,::1,*.local"
 
 if exist "%~dp0agy-real.exe" (
     "%~dp0agy-real.exe" %*

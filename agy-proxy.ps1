@@ -28,7 +28,7 @@ try {
     $env:https_proxy = $targetProxy
     $env:ALL_PROXY   = $targetProxy
     $env:all_proxy   = $targetProxy
-    $env:NO_PROXY    = 'localhost,127.0.0.1,::1'
+    $env:NO_PROXY    = 'localhost,127.0.0.1,::1,*.local'
 
     $targetRealExe = Join-Path $PSScriptRoot 'agy-real.exe'
     $targetExe     = Join-Path $PSScriptRoot 'agy.exe'

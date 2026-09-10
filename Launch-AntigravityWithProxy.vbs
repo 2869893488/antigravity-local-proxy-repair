@@ -6,7 +6,7 @@ Set env = shell.Environment("PROCESS")
 env("HTTP_PROXY") = "http://127.0.0.1:7890"
 env("HTTPS_PROXY") = "http://127.0.0.1:7890"
 env("ALL_PROXY") = "http://127.0.0.1:7890"
-env("NO_PROXY") = "localhost,127.0.0.1,::1"
+env("NO_PROXY") = "localhost,127.0.0.1,::1,*.local"
 
 appPath = shell.ExpandEnvironmentStrings("%LOCALAPPDATA%\Programs\antigravity\Antigravity.exe")
 shell.Run Chr(34) & appPath & Chr(34), 1, False
