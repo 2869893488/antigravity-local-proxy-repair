@@ -559,11 +559,6 @@ try {
     Write-Utf8NoBom $shimCmd ($cmdContent + [Environment]::NewLine)
     Write-Utf8NoBom $shimPs1 ($ps1Content + [Environment]::NewLine)
 
-    $localBinCmd = Join-Path $PSScriptRoot 'agy-proxy.cmd'
-    $localBinPs1 = Join-Path $PSScriptRoot 'agy-proxy.ps1'
-    Write-Utf8NoBom $localBinCmd ($cmdContent + [Environment]::NewLine)
-    Write-Utf8NoBom $localBinPs1 ($ps1Content + [Environment]::NewLine)
-
     Write-Status "已就绪专用垫片启动器：$shimCmd"
 }
 
