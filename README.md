@@ -67,3 +67,11 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 修改前会在原文件旁生成 `.bak-proxy-年月日-时分秒` 备份。新版 CLI 安装器还会在 `settings.json` 旁创建 `settings.json.agy-proxy-state.json`，用于记录**首次安装前**的字段值。重复安装不会覆盖初始记录；卸载完成后自动清理。若发现冲突，会保留这份记录，供人工核对。
 
 桌面端脚本目前没有自动卸载命令；桌面端修改仍需根据备份手工恢复。
+
+---
+
+## PR 自动测试与合并
+
+本仓库的 Windows CI 会对非草稿 PR 执行 PowerShell 5.1 语法检查，以及 CLI 安装、卸载恢复和启动器隔离测试。
+
+当所有这些测试通过后，仅对**仓库所有者创建**、目标为 `master`，且改动文件**全部属于** `README.md` 或 `Install-AgyProxyPatch.ps1` 的 PR，GitHub Actions 才尝试自动 Squash 合并。涉及其他文件（包括 `tests/`、`.github/` 与桌面端脚本）的 PR 一律需要人工合并。代码冲突、测试失败或合并权限不足时不会强制合并。此功能**不包含 Gemini/AI 审查**，测试通过也不代表没有潜在问题。
