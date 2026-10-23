@@ -1,0 +1,69 @@
+# Gemini Code Review for PRs created from branches in this repository.
+# Requires repository secret GEMINI_API_KEY. Fork PRs are skipped to protect secrets.
+# This workflow ONLY reviews and comments; it cannot merge or modify source code.
+name: Gemini PR review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gemini-review:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check Gemini API key configuration
+        shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [[ -z "$GEMINI_API_KEY" ]]; then
+            echo "::error::Missing GEMINI_API_KEY repository secret. See PR setup instructions."
+            exit 1
+          fi
+
+      - name: Checkout PR files for review (without persisting credentials)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run Gemini code review
+        uses: google-github-actions/run-gemini-cli@v0
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          workflow_name: gemini-review
+          github_pr_number: ${{ github.event.pull_request.number }}
+          settings: |
+            {
+              "model": {"maxSessionTurns": 25},
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server:v0.27.0"],
+                  "includeTools": ["add_comment_to_pending_review", "pull_request_read", "pull_request_review_write"],
+                  "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"}
+                }
+              },
+              "tools": {"core": []}
+            }
+          extensions: |
+            ["https://github.com/gemini-cli-extensions/code-review"]
+          prompt: '/pr-code-review'
