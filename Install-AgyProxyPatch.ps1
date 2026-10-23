@@ -476,13 +476,8 @@ Save-InstallState $statePath $state
 Write-Utf8NoBom $ConfigPath (($config | ConvertTo-Json -Depth 20) + [Environment]::NewLine)
 Write-Status "已安全写入 settings.json (UTF-8 无 BOM)，并记录卸载所需的原始配置"
 
-# 4.2 安装环境隔离 Shim 启动器 (agy-proxy.cmd / agy-proxy.ps1)
-if (-not $NoShim) {
-    if (-not (Test-Path -LiteralPath $AgyBinDirectory)) {
-        New-Item -ItemType Directory -Path $AgyBinDirectory -Force | Out-Null
-    }
-
-    $cmdContent = @"
+# 4.2 为 shim 和接管入口生成同一份 CMD 包装器，避免重复维护
+$cmdContent = @"
 @echo off
 rem ====================================================================
 rem Antigravity CLI Process-Scoped Proxy Wrapper
@@ -513,6 +508,11 @@ if exist "%~dp0agy-real.exe" (
 set "EXITCODE=%ERRORLEVEL%"
 endlocal & exit /b %EXITCODE%
 "@
+
+if (-not $NoShim) {
+    if (-not (Test-Path -LiteralPath $AgyBinDirectory)) {
+        New-Item -ItemType Directory -Path $AgyBinDirectory -Force | Out-Null
+    }
 
     $ps1Content = @"
 <#
@@ -577,6 +577,9 @@ try {
 if ($TakeoverAgy) {
     if ((Test-Path -LiteralPath $takeoverCmd) -and -not (Test-ManagedWrapper $takeoverCmd)) {
         throw "发现非本安装器生成的 agy.cmd，拒绝覆盖：$takeoverCmd"
+    }
+    if (-not $exeFound) {
+        throw "未找到原生 agy.exe 或 agy-real.exe，拒绝部署不可用的接管脚本：$AgyBinDirectory"
     }
     Write-Status "正在配置全局 agy 命令接管..."
     if ((Test-Path -LiteralPath $agyExe) -and -not (Test-Path -LiteralPath $agyRealExe)) {
