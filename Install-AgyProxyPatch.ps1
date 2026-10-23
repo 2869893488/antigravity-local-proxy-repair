@@ -259,6 +259,7 @@ if ($Uninstall) {
     # 旧版安装没有记录原值：此时绝不能猜测原配置或直接删除字段。
     $restorePending = $false
     if (-not (Test-Path -LiteralPath $statePath)) {
+        $restorePending = $true
         Write-WarnStatus "未找到安装前配置记录：$statePath。为避免删除原有设置，未修改 settings.json。旧版备份可手工检查：$ConfigPath.bak-proxy-*"
     } else {
         try {
@@ -327,6 +328,7 @@ if ($Uninstall) {
                 Write-WarnStatus "部分配置未还原，记录仍保留在 $statePath，可手工核对后再卸载。"
             }
         } catch {
+            $restorePending = $true
             Write-WarnStatus "无法安全恢复 settings.json：$_。保留安装记录及现有配置，请手工检查备份。"
         }
     }
@@ -374,6 +376,10 @@ if ($Uninstall) {
         }
     }
 
+    if ($restorePending) {
+        Write-WarnStatus "启动器卸载流程已结束，但部分配置未能自动恢复；请检查上述警告。"
+        exit 1
+    }
     Write-Status "卸载与还原完成。"
     exit 0
 }
@@ -384,6 +390,18 @@ Write-Status "目标代理地址：$ProxyUrl"
 
 if (-not $portAccessible) {
     Write-WarnStatus "目标代理地址 $ProxyUrl 目前无法连接！请确保代理客户端（如 Clash/V2Ray/Sing-box 等）已开启且监听对应端口。"
+}
+
+# 安装前检查路径所有权，不能覆盖用户自有启动器。
+if (-not $NoShim) {
+    foreach ($shim in @($shimCmd, $shimPs1)) {
+        if ((Test-Path -LiteralPath $shim) -and -not (Test-ManagedWrapper $shim)) {
+            throw "发现非本安装器生成的启动器，拒绝覆盖：$shim"
+        }
+    }
+}
+if ($TakeoverAgy -and (Test-Path -LiteralPath $takeoverCmd) -and -not (Test-ManagedWrapper $takeoverCmd)) {
+    throw "发现非本安装器生成的 agy.cmd，拒绝覆盖：$takeoverCmd"
 }
 
 # 4.1 更新 settings.json，并为卸载保存首次安装前的字段状态
