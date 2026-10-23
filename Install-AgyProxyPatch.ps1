@@ -315,7 +315,7 @@ if ($Uninstall) {
 
                 if ($modified) {
                     Backup-File $ConfigPath
-                    if (-not $state.configExisted -and $config.PSObject.Properties.Count -eq 0) {
+                    if (-not $state.configExisted -and ($config | ConvertTo-Json -Depth 20 -Compress).Trim() -eq '{}') {
                         Remove-Item -LiteralPath $ConfigPath -Force -ErrorAction Stop
                         Write-Status '已移除安装器新建的空 settings.json'
                     } else {
