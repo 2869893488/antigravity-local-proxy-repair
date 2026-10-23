@@ -1,0 +1,97 @@
+name: Guarded auto-merge after Windows tests
+
+# Runs from master after the unprivileged Windows test workflow completes.
+# This workflow NEVER checks out or executes code from a PR.
+on:
+  workflow_run:
+    workflows: ["CLI uninstall restoration tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  guarded-auto-merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Check PR ownership, latest commit, and changed-file allowlist before merging
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_PULL_REQUESTS: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          TRUSTED_AUTHOR: "2869893488"
+        run: |
+          set -euo pipefail
+
+          # Fail closed if the completed workflow isn't associated with one PR.
+          pr_count=$(jq 'length' <<< "$RUN_PULL_REQUESTS")
+          if [[ "$pr_count" != "1" ]]; then
+            echo "::notice::Expected exactly one PR; refusing automatic merge."
+            exit 0
+          fi
+          pr_number=$(jq -r '.[0].number // empty' <<< "$RUN_PULL_REQUESTS")
+          if [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid PR number."
+            exit 1
+          fi
+
+          pr=$(gh api "repos/$REPOSITORY/pulls/$pr_number")
+          pr_state=$(jq -r '.state' <<< "$pr")
+          pr_draft=$(jq -r '.draft' <<< "$pr")
+          pr_author=$(jq -r '.user.login' <<< "$pr")
+          pr_head_repo=$(jq -r '.head.repo.full_name' <<< "$pr")
+          pr_base=$(jq -r '.base.ref' <<< "$pr")
+          pr_head_sha=$(jq -r '.head.sha' <<< "$pr")
+          if [[ "$pr_state" != "open" || "$pr_draft" != "false" ||
+                "$pr_author" != "$TRUSTED_AUTHOR" ||
+                "$pr_head_repo" != "$REPOSITORY" ||
+                "$pr_base" != "master" ||
+                "$pr_head_sha" != "$RUN_HEAD_SHA" ]]; then
+            echo "::notice::PR #$pr_number is draft, external, changed since CI, or otherwise ineligible."
+            exit 0
+          fi
+
+          # Only these small, directly tested project files are eligible.
+          # Changes to tests, Actions, secrets, other scripts, or any new files
+          # MUST be reviewed and merged manually. No PR code is executed here.
+          changed_files=$(jq -r '.changed_files' <<< "$pr")
+          if [[ ! "$changed_files" =~ ^[0-9]+$ ||
+                "$changed_files" -lt 1 || "$changed_files" -gt 100 ]]; then
+            echo "::notice::Unusual file count; review manually."
+            exit 0
+          fi
+          files_json=$(gh api "repos/$REPOSITORY/pulls/$pr_number/files?per_page=100")
+          file_count=$(jq 'length' <<< "$files_json")
+          if [[ "$file_count" -ne "$changed_files" ]]; then
+            echo "::notice::Incomplete changed-file listing; review manually."
+            exit 0
+          fi
+
+          while IFS= read -r file; do
+            case "$file" in
+              README.md|Install-AgyProxyPatch.ps1) ;;
+              *)
+                echo "::notice::Change to '$file' requires a manual review."
+                exit 0
+                ;;
+            esac
+          done < <(jq -r '.[].filename' <<< "$files_json")
+
+          # GitHub will enforce any active branch-protection checks/reviews.
+          # Never use --admin; the head SHA is pinned to avoid racing pushes.
+          gh pr merge "$pr_number" \
+            --repo "$REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --match-head-commit "$RUN_HEAD_SHA"
