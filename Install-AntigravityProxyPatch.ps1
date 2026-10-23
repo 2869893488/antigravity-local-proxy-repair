@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidatePattern('^https?://')]
     [string]$ProxyUrl = 'http://127.0.0.1:7890',
