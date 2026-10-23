@@ -287,6 +287,8 @@ if ($Uninstall) {
                             Remove-PropertyIfExists $config 'proxyServerURL'
                         }
                         $modified = $true
+                    } elseif ($state.originalProxy.existed -and $currentProxy.Value -ceq $state.originalProxy.value) {
+                        Write-Status 'proxyServerURL 已与首次安装前一致，无需修改。'
                     } else {
                         Write-WarnStatus '检测到 proxyServerURL 在安装后被修改，已保留用户当前值。'
                         $restorePending = $true
@@ -300,6 +302,9 @@ if ($Uninstall) {
                     if ($null -eq $config.PSObject.Properties['modelProvider']) {
                         Add-OrReplaceProperty $config 'modelProvider' $state.originalModelProvider.value
                         $modified = $true
+                    } elseif (($config.modelProvider | ConvertTo-Json -Depth 30 -Compress) -ceq
+                              ($state.originalModelProvider.value | ConvertTo-Json -Depth 30 -Compress)) {
+                        Write-Status 'modelProvider 已与首次安装前一致，无需修改。'
                     } else {
                         Write-WarnStatus 'modelProvider 已重新配置，已保留用户当前值。'
                         $restorePending = $true
