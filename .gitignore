@@ -1,3 +1,6 @@
 *.bak-proxy-*
 *.log
 
+# Gemini CLI local settings and temporary GitHub App credentials
+.gemini/
+gha-creds-*.json
