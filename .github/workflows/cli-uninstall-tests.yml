@@ -1,19 +1,43 @@
 name: CLI uninstall restoration tests
 
+# Run for EVERY PR, not only PRs touching selected paths.
+# Otherwise a workflow could accidentally merge an untested PR.
 on:
   pull_request:
-    paths:
-      - 'Install-AgyProxyPatch.ps1'
-      - 'tests/**'
-      - '.github/workflows/cli-uninstall-tests.yml'
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   windows-powershell:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Run PowerShell uninstall smoke tests
+        with:
+          persist-credentials: false
+
+      - name: Parse both installers (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          foreach ($script in @('Install-AgyProxyPatch.ps1', 'Install-AntigravityProxyPatch.ps1')) {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Join-Path (Get-Location).Path $script),
+              [ref]$tokens,
+              [ref]$parseErrors
+            )
+            if ($parseErrors.Count -ne 0) {
+              $parseErrors | Format-List | Out-String | Write-Error
+              throw "PowerShell parsing failed for $script"
+            }
+          }
+
+      - name: Test safe install/uninstall and updater isolation
         shell: powershell
         run: |
           .\tests\Test-UninstallRestore.ps1
