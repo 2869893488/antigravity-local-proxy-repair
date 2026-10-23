@@ -367,16 +367,18 @@ if ($Uninstall) {
         }
     }
 
-    # 3.4 清理 PowerShell Profile 钩子
-    $profilePaths = Get-RelevantProfilePaths
-    foreach ($p in $profilePaths) {
-        if (Test-Path -LiteralPath $p) {
-            $text = [System.IO.File]::ReadAllText($p)
-            if ($text -match [regex]::Escape($beginMarker)) {
-                Backup-File $p
-                $newText = [regex]::Replace($text, $profilePattern, '')
-                Write-Utf8NoBom $p $newText
-                Write-Status "已从 Profile 移除钩子：$p"
+    # 3.4 清理 PowerShell Profile 钩子（-NoProfileHook 时跳过）
+    if (-not $NoProfileHook) {
+        $profilePaths = Get-RelevantProfilePaths
+        foreach ($p in $profilePaths) {
+            if (Test-Path -LiteralPath $p) {
+                $text = [System.IO.File]::ReadAllText($p)
+                if ($text -match [regex]::Escape($beginMarker)) {
+                    Backup-File $p
+                    $newText = [regex]::Replace($text, $profilePattern, '')
+                    Write-Utf8NoBom $p $newText
+                    Write-Status "已从 Profile 移除钩子：$p"
+                }
             }
         }
     }
